@@ -1,6 +1,5 @@
 classdef oscillatingFish < handle
-    
-    
+       
     properties    
         omega = .25;        % Natural heading turning frequency
         Omega = .25*pi;     % Natural speed phase frequency
@@ -12,14 +11,16 @@ classdef oscillatingFish < handle
     end % end public properties
     
     properties (Access = private)      
-        P_matrix;      % The P matrix, I(n) - ones(n)
-        N;             % Number of robots
-        phi;           % N x 1 matrix of speed phase angles      
+        P_matrix;           % The P matrix, I(n) - ones(n)
+        N;                  % Number of robots
+        phi;                % N x 1 matrix of speed phase angles      
     end % end private properties
     
     methods
         
-        % Constructor
+%************************************************************************
+%  Object contructor. Initialize object properties.
+%************************************************************************
         function OF = oscillatingFish(initial_poses)
             OF.initial_poses = initial_poses;
             OF.N = size(initial_poses, 1);
@@ -27,7 +28,9 @@ classdef oscillatingFish < handle
             OF.phi = zeros(OF.N, 1);           
         end % end constructor
         
-        % Control law main
+%************************************************************************ 
+%  Main for oscillating fish control law.        
+%************************************************************************
         function [ commands ] = fishControlLaw(OF, ~, states)
             
             commands = zeros(OF.N, 3);    % init. command matrix as 0's
@@ -61,7 +64,10 @@ classdef oscillatingFish < handle
             end % end for loop          
         end % end control law
         
-        % Ellipse locus constructor method - return N vector
+%************************************************************************ 
+%  E matrix constructor. Defines elliptical locus of particle positions
+%  about current spot on greater circular orbit. 
+%************************************************************************
         function [ E_matrix ] = createE(OF)
             
             E_matrix = zeros(OF.N, 1);
@@ -72,7 +78,10 @@ classdef oscillatingFish < handle
             end % end loop           
         end % end createE
         
-        % Conversion from cartesian to complex plane - return N vector
+%************************************************************************ 
+%  R matrix constructor method. Converts cartesian input to complex plane
+%  coordinates. Returns a length N vector of complex positions.        
+%************************************************************************
         function [ R_matrix ] = createR(OF, states)
             
             R_matrix = zeros(OF.N, 1);
@@ -83,7 +92,11 @@ classdef oscillatingFish < handle
             end % end for loop           
         end % end createR
         
-        % S matrix constructor method - return N vector 
+%************************************************************************ 
+%  S matrix constructor method. Returns a length N vector.
+%  nth component is iwc(n), c(n) the current trajectory center.       
+%************************************************************************      
+        
         function [ s_matrix ] = createS(OF, R, E, states)
             
             s_matrix = zeros(OF.N, 1);
@@ -96,6 +109,10 @@ classdef oscillatingFish < handle
             end % end for loop            
         end % end createS
         
+%************************************************************************ 
+%  Built in simulator. Same basic function as Miabots.m simulate method. 
+%  No max speed cutoff or differential drive control.
+%************************************************************************    
         function [] = simulate(OF, runTime)
             close all
             clear trajectory current_position
