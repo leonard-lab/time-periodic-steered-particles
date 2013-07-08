@@ -4,7 +4,7 @@ classdef oscillatingFish < handle
     properties    
         omega = .25;        % Natural heading turning frequency
         Omega = .25*pi;     % Natural speed phase frequency
-        mu = 0.5;             % Speed oscillation parameter
+        mu = 0.5;           % Speed oscillation parameter
         k = 10;             % Steering control parameter
         time_step = 0.04;   % Discrete time step between commands
         initial_poses;      % initial robot positions
@@ -61,7 +61,7 @@ classdef oscillatingFish < handle
             end % end for loop          
         end % end control law
         
-        % Ellipse locus constructor method
+        % Ellipse locus constructor method - return N vector
         function [ E_matrix ] = createE(OF)
             
             E_matrix = zeros(OF.N, 1);
@@ -72,7 +72,7 @@ classdef oscillatingFish < handle
             end % end loop           
         end % end createE
         
-        % Conversion from cartesian to complex plane
+        % Conversion from cartesian to complex plane - return N vector
         function [ R_matrix ] = createR(OF, states)
             
             R_matrix = zeros(OF.N, 1);
@@ -83,7 +83,7 @@ classdef oscillatingFish < handle
             end % end for loop           
         end % end createR
         
-        % S matrix constructor method
+        % S matrix constructor method - return N vector 
         function [ s_matrix ] = createS(OF, R, E, states)
             
             s_matrix = zeros(OF.N, 1);
