@@ -1,13 +1,13 @@
 classdef oscillatingFish < handle
     
     properties
-        omega = .25;        % Natural heading turning frequency
-        Omega = .25*pi;     % Natural speed phase frequency
+        omega = .45;        % Natural heading turning frequency
+        Omega = .45*pi;     % Natural speed phase frequency
         mu = 0.5;           % Speed oscillation parameter
         k = 10;             % Steering control parameter
-        time_step = 0.04;   % Discrete time step between commands
+        time_step = 1/15;   % Discrete time step between commands
         initial_poses;      % initial robot positions
-        scale = 50;         % Commands scaling  1 meter: scale
+        scale = 25;         % Commands scaling  1 meter: scale
     end % end public properties
     
     properties (Access = private)
@@ -172,7 +172,7 @@ classdef oscillatingFish < handle
                 theta_history(1, robot) = OF.initial_poses(robot, 4);
             end % end initial positions loop
             
-            for t = 1:runTime
+            for t = 1:(runTime/OF.time_step)
                 x_old = states(:, 1);
                 y_old = states(:, 2);
                 theta_old = states(:, 6);
@@ -231,12 +231,12 @@ classdef oscillatingFish < handle
                     y_history(1, robot),'Marker','.','markersize', 20);
             end
             
-            for i = 1:runTime
+            for i = 1:runTime/OF.time_step
                 for robot = 1:OF.N
                     set(current_position(robot), 'xdata', x_history(i, robot), ...
                         'ydata', y_history(i, robot));
                 end
-                pause(.01)
+                pause(OF.time_step)
             end
             
         end % end simulate

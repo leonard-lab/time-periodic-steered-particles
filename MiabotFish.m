@@ -5,7 +5,7 @@ pointGenerator;
 fish = oscillatingFish(positions);
 
 runTime = 100;
-simulate(fish, runTime/.04);
+simulate(fish, runTime);
 
 % call control law for robot motion
 control_law = @(t, x) fish.fishControlLaw(t,x);
