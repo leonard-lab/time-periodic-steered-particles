@@ -1,19 +1,22 @@
 classdef oscillatingFish < handle
     
     properties
-        omega = .45;        % Natural heading turning frequency
-        Omega = .45*pi;     % Natural speed phase frequency
+        omega = .75;        % Natural heading turning frequency
+        Omega = .5*(pi);     % Natural speed phase frequency
         mu = 0.5;           % Speed oscillation parameter
-        k = 10;             % Steering control parameter
+        k = 1;            % Steering control parameter
         time_step = 1/15;   % Discrete time step between commands
         initial_poses;      % initial robot positions
-        scale = 25;         % Commands scaling  1 meter: scale
+        scale = 5;         % Commands scaling  1 meter: scale
+        phi;
+        last;
     end % end public properties
     
     properties (Access = private)
         P_matrix;           % The P matrix, I(n) - ones(n)
         N;                  % Number of robots
-        phi;                % N x 1 matrix of speed phase angles
+       % phi;                % N x 1 matrix of speed phase angles
+        R0 = 0;
     end % end private properties
     
     methods
@@ -31,7 +34,7 @@ classdef oscillatingFish < handle
 %************************************************************************
 %  Main for oscillating fish control law.
 %************************************************************************
-        function [ commands ] = fishControlLaw(OF, ~, states)
+        function [ commands ] = fishControlLaw(OF, t, states)
             
             commands = zeros(OF.N, 3);    % init. command matrix as 0's
             
@@ -56,7 +59,12 @@ classdef oscillatingFish < handle
                 % u_theta = OF.omega - OF.k*real(a'*b);  % Heading control
                 
                 u_theta = OF.thetaControl(r, E, states, j);
-                phi_j_dot = OF.Omega/OF.omega*u_theta; % Phi control
+                
+                
+                p_phi = OF.OrderParameter(OF.phi);
+                a = -1*real(p_phi'*1i*exp(1i*phi_j));
+                phi_j_dot = OF.Omega/OF.omega*u_theta + a; % Phi control
+                
                 
                 % Update phi, send new commands
                 OF.phi(j, 1) = phi_j + phi_j_dot*OF.time_step;
@@ -115,13 +123,14 @@ classdef oscillatingFish < handle
 %************************************************************************
         function [ u_theta ] = thetaControl(OF, R, E, states, j)
             thetas = states(:, 6);
-            p_phi = OF.OrderParameter(thetas);
+            p_theta = OF.OrderParameter(thetas);
             
-            r_tilde = OF.P_matrix(j, :)*R;
+            %r_tilde = OF.P_matrix(j, :)*R;
+            r_tilde = R(j) - OF.R0; 
             e = OF.getE(E, states);
             e_tilde = OF.P_matrix(j, :)*e;            
             
-            a = OF.k*real(p_phi'*1i*exp(1i*states(j, 6)));
+            a = OF.k*real(p_theta'*1i*exp(1i*states(j, 6)));
             
             b = OF.omega*(1 + OF.k*real(r_tilde'*exp(1i*states(j, 6))));
             
@@ -208,6 +217,7 @@ classdef oscillatingFish < handle
                 states(:, 4) = vx;
                 states(:, 6) = theta_new;
                 states(:, 7) = utheta;
+                OF.last = states;
                 
                 % Add to history
                 for robot = 1:OF.N
@@ -219,9 +229,13 @@ classdef oscillatingFish < handle
             end % end runtime loop
             
             % Plot trajectories
+            plot(theta_history);
             figure
+            plot(0,0,'Marker','.','markersize',30);
             hold on;
             plot(x_history,y_history);
+            center = plot(real(OF.R0),imag(OF.R0),'Marker','.','markersize',20);
+            
             axis('equal');
             
             current_position = zeros(robot);
@@ -236,6 +250,7 @@ classdef oscillatingFish < handle
                     set(current_position(robot), 'xdata', x_history(i, robot), ...
                         'ydata', y_history(i, robot));
                 end
+                
                 pause(OF.time_step)
             end
             
