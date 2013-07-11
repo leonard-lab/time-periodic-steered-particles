@@ -5,9 +5,9 @@ classdef oscillatingFish < handle
         Omega = .5*(pi);     % Natural speed phase frequency
         mu = 0.5;           % Speed oscillation parameter
         k = 1;            % Steering control parameter
-        time_step = 1/15;   % Discrete time step between commands
+        time_step = 1/7.5;   % Discrete time step between commands
         initial_poses;      % initial robot positions
-        scale = 5;         % Commands scaling  1 meter: scale
+        scale = 10;         % Commands scaling  1 meter: scale
         phi;
         last;
     end % end public properties
@@ -17,6 +17,7 @@ classdef oscillatingFish < handle
         N;                  % Number of robots
        % phi;                % N x 1 matrix of speed phase angles
         R0 = 0;
+        time = 0;
     end % end private properties
     
     methods
@@ -36,6 +37,9 @@ classdef oscillatingFish < handle
 %************************************************************************
         function [ commands ] = fishControlLaw(OF, t, states)
             
+           % dt = t - OF.time;
+            dt = OF.time_step;
+            OF.time = t;
             commands = zeros(OF.N, 3);    % init. command matrix as 0's
             
             % Convert units of states (e.g. m -> cm)
@@ -67,7 +71,7 @@ classdef oscillatingFish < handle
                 
                 
                 % Update phi, send new commands
-                OF.phi(j, 1) = phi_j + phi_j_dot*OF.time_step;
+                OF.phi(j, 1) = phi_j + phi_j_dot*dt;
                 commands(j,1) = u_x/OF.scale;
                 commands(j,2) = u_theta;
             end % end for loop
@@ -125,18 +129,19 @@ classdef oscillatingFish < handle
             thetas = states(:, 6);
             p_theta = OF.OrderParameter(thetas);
             
-            %r_tilde = OF.P_matrix(j, :)*R;
-            r_tilde = R(j) - OF.R0; 
+            r_tilde = OF.P_matrix(j, :)*R;
+            %r_tilde = R(j) - OF.R0; 
             e = OF.getE(E, states);
             e_tilde = OF.P_matrix(j, :)*e;            
             
             a = OF.k*real(p_theta'*1i*exp(1i*states(j, 6)));
-            
+            k_a = 2*a;
             b = OF.omega*(1 + OF.k*real(r_tilde'*exp(1i*states(j, 6))));
             
             c = OF.mu*OF.k*OF.omega*real(e_tilde'*exp(1i*states(j, 6)));
+            %c = 0;
             
-            u_theta = a + b + c;
+            u_theta = a + b + c + k_a;
         end
         
         function [ order_parameter] = OrderParameter(OF, psi)
@@ -251,7 +256,7 @@ classdef oscillatingFish < handle
                         'ydata', y_history(i, robot));
                 end
                 
-                pause(OF.time_step)
+                pause(.1)
             end
             
         end % end simulate
