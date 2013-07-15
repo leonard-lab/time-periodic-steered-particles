@@ -1,3 +1,4 @@
+%%
 clear all
 clc
 close all
@@ -5,7 +6,10 @@ pointGenerator;
 fish = oscillatingFish(positions);
 
 runTime = 100;
+%%
 simulate(fish, runTime);
+
+%%
 
 % call control law for robot motion
 control_law = @(t, x) fish.fishControlLaw(t,x);
@@ -14,8 +18,7 @@ control_law = @(t, x) fish.fishControlLaw(t,x);
 m = Miabots(fish.initial_poses, control_law, 'velocity', runTime,...
     'sim', true,'sim_noise', [.00 .00 .00 .00]);
 m.start
-
-
+%%
 % plots the resulting path of the two robots against the ideal
 figure
 hold on
@@ -23,6 +26,7 @@ N = size(fish.initial_poses,1);
 for robot = 1:N
     plot(m.get_history(robot,'x'), m.get_history(robot,'y'));
 end
+axis('equal');
 colors = ['r';'b';'g';'k';'y';'m'];
 a = size(m.get_history(1,'x'));
 position = zeros(N);
@@ -42,7 +46,7 @@ for i = 1:a(2)
             'ydata', statey(i));
     end
     
-    pause(.002)
+    pause(.05)
 end
 
 

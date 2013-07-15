@@ -1,13 +1,13 @@
 classdef oscillatingFish < handle
     
     properties
-        omega = .75;        % Natural heading turning frequency
-        Omega = .5*(pi);     % Natural speed phase frequency
+        omega = .5;        % Natural heading turning frequency
+        Omega = .5*7;     % Natural speed phase frequency
         mu = 0.5;           % Speed oscillation parameter
         k = 1;            % Steering control parameter
         time_step = 1/7.5;   % Discrete time step between commands
         initial_poses;      % initial robot positions
-        scale = 10;         % Commands scaling  1 meter: scale
+        scale = 5;         % Commands scaling  1 meter: scale
         phi;
         last;
     end % end public properties
@@ -16,7 +16,7 @@ classdef oscillatingFish < handle
         P_matrix;           % The P matrix, I(n) - ones(n)
         N;                  % Number of robots
        % phi;                % N x 1 matrix of speed phase angles
-        R0 = 0;
+        R0 = .1;
         time = 0;
     end % end private properties
     
@@ -50,7 +50,7 @@ classdef oscillatingFish < handle
             % Compute particle dynamics
             E = OF.createE();             % create ellipse matrix E(phi)
             r = OF.createR(states);       % create complex vector matrix
-            %s = OF.createS(r, E, states); % create S matrix
+            s = OF.createS(r, E, states); % create S matrix
             
             % loop to set positions for robots
             for j = 1:OF.N
@@ -58,20 +58,25 @@ classdef oscillatingFish < handle
                 phi_j = OF.phi(j, 1);         % Get current speed phase
                 u_x = (1 + OF.mu*cos(phi_j)); % Compute new forward speed
                 
-                % a = OF.P_matrix(j, :)*s;
-                % b = 1i*exp(1i*states(j, 6));
-                % u_theta = OF.omega - OF.k*real(a'*b);  % Heading control
+                a = OF.P_matrix(j, :)*s;
+                b = 1i*exp(1i*states(j, 6));
                 
-                u_theta = OF.thetaControl(r, E, states, j);
+                thetas = states(:, 6);
+                p_theta = OF.OrderParameter(thetas);
+                k_a = 3*real(p_theta'*1i*exp(1i*states(j, 6)));
+                
+                u_theta = OF.omega - OF.k*real(a'*b) + k_a;  % Heading control
+                
+                %u_theta = OF.thetaControl(r, E, states, j);
                 
                 
                 p_phi = OF.OrderParameter(OF.phi);
-                a = -1*real(p_phi'*1i*exp(1i*phi_j));
-                phi_j_dot = OF.Omega/OF.omega*u_theta + a; % Phi control
+                a = -2*real(p_phi'*1i*exp(1i*phi_j));
+                phi_j_dot = OF.Omega/OF.omega*u_theta - a; % Phi control
                 
                 
                 % Update phi, send new commands
-                OF.phi(j, 1) = phi_j + phi_j_dot*dt;
+                OF.phi(j, 1) = (phi_j + phi_j_dot*dt);
                 commands(j,1) = u_x/OF.scale;
                 commands(j,2) = u_theta;
             end % end for loop
@@ -135,13 +140,13 @@ classdef oscillatingFish < handle
             e_tilde = OF.P_matrix(j, :)*e;            
             
             a = OF.k*real(p_theta'*1i*exp(1i*states(j, 6)));
-            k_a = 2*a;
+            k_a = 3*a;
             b = OF.omega*(1 + OF.k*real(r_tilde'*exp(1i*states(j, 6))));
             
             c = OF.mu*OF.k*OF.omega*real(e_tilde'*exp(1i*states(j, 6)));
             %c = 0;
             
-            u_theta = a + b + c + k_a;
+            u_theta = -a + b +c;
         end
         
         function [ order_parameter] = OrderParameter(OF, psi)
@@ -180,10 +185,13 @@ classdef oscillatingFish < handle
             y_history = zeros(runTime + 1, OF.N);
             theta_history = zeros(runTime + 1, OF.N);
             
+            phi_history = zeros(runTime+1, OF.N);
+            
             for robot = 1:OF.N
                 x_history(1, robot) = OF.initial_poses(robot, 1);
                 y_history(1, robot) = OF.initial_poses(robot, 2);
                 theta_history(1, robot) = OF.initial_poses(robot, 4);
+                phi_history(1, robot) = OF.phi(robot);
             end % end initial positions loop
             
             for t = 1:(runTime/OF.time_step)
@@ -229,12 +237,15 @@ classdef oscillatingFish < handle
                     x_history(t + 1, robot) = x_new(robot);
                     y_history(t + 1, robot) = y_new(robot);
                     theta_history(t + 1, robot) = theta_new(robot);
+                    phi_history(t + 1, robot) = OF.phi(robot);
                 end % history update loop
                 
             end % end runtime loop
             
             % Plot trajectories
             plot(theta_history);
+            figure
+            plot(phi_history);
             figure
             plot(0,0,'Marker','.','markersize',30);
             hold on;
