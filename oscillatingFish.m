@@ -17,6 +17,10 @@ classdef oscillatingFish < handle
     % initial_poses: n_robots X [x y z theta] matrix of the initial
     % positions and headings of the robots.
     %
+    % headings - Optional input parameter. 'splay', 'sync', or 'none' 
+    % sets control law coefficients to stabilize either splayed, synchronized, 
+    % or arbitrary robot positioning about overall orbit. 
+    %
     % PROPERTIES
     %
     % omega - natural turning rate for robots. In rad/s.
@@ -31,9 +35,6 @@ classdef oscillatingFish < handle
     %
     % scale - Speed conversion factor. (scale) # units/s = 1 meter/s.
     %
-    % theta_state - 'splay', 'sync', or neither sets control law
-    % coefficients to stabilize either splayed, synchronized, or arbitrary
-    % robot positioning about overall orbit. 
     %
     % METHODS
     %
@@ -48,26 +49,26 @@ classdef oscillatingFish < handle
     %**********************************************************************
     
     properties (Access = public)
-        omega = 1;           % Natural heading turning frequency
+        omega = 1;             % Natural heading turning frequency
         Omega = 1*2.5;         % Natural speed phase frequency
         mu = 0.5;              % Speed oscillation parameter
         k = 1;                 % Steering control parameter
         k_phi = 1;             % Speed phase control parameter
         scale = 1;             % Commands scaling  1 meter: scale
-        theta_state = 'sync';  % Control for heading alignments
-        initial_poses;        % initial robot positions
-        collision = 0;       
-        c;
+
     end % end public properties
     
     properties (Access = private)
         P_matrix;             % The P matrix, I(n) - ones(n)
         N;                    % Number of robots
         phi;                  % N x 1 matrix of speed phase angles
-        
         time_step = 1/7.5;    % Default time step between commands
         time = 0;             % Current running time
-        phi_last;
+        phi_last;  
+        initial_poses;        % initial robot positions
+        theta_state;          % Control for heading alignments
+        collisions; 
+        
     end % end private properties
        
     methods (Access = public)
@@ -75,11 +76,26 @@ classdef oscillatingFish < handle
 %************************************************************************
 %  Object contructor. Initialize object properties.
 %************************************************************************
-        function OF = oscillatingFish(initial_poses)
-            OF.initial_poses = initial_poses;
-            OF.N = size(initial_poses, 1);
+        function OF = oscillatingFish(initial_poses, varargin)
+            
+            p = inputParser;
+            
+            defaultState = 'sync';
+            expected_states = {'sync', 'splay', 'none'};
+            defaultCollision_Avoidance = false;
+            
+            addRequired(p, 'initial_poses', @(x) ismatrix(x) && isnumeric(x) && (size(x, 2)==4));
+            addOptional(p, 'headings', defaultState, @(x) any(validatestring(x, expected_states)));
+            addOptional(p, 'collision_avoidance', defaultCollision_Avoidance, @islogical);
+            
+            parse(p, initial_poses, varargin{:});
+            
+            OF.initial_poses = p.Results.initial_poses;
+            OF.N = size(OF.initial_poses, 1);
             OF.P_matrix = eye(OF.N) - 1/OF.N*ones(OF.N);
-            OF.phi = zeros(OF.N, 1);
+            OF.phi = zeros(OF.N, 1);      
+            OF.theta_state = p.Results.headings;
+            OF.collisions = p.Results.collision_avoidance;
             
         end % end constructor
         
@@ -120,8 +136,7 @@ classdef oscillatingFish < handle
                 
                 phi_j = OF.phi(j, 1);  % Get current speed phase
                 
-                % compute forward speed (u_x) and turning rate (u_theta)
-                % u_x = (1 + OF.mu*cos(phi_j));  
+                % compute forward speed (u_x) and turning rate (u_theta) 
                 u_x = OF.forwardControl(states, r, phi_j, j);
                 u_theta = OF.headingControl(states, s, coeff, r, j); 
                                 
@@ -140,11 +155,47 @@ classdef oscillatingFish < handle
 %  No max speed cutoff or differential drive control.
 %************************************************************************
 
-        function [] = simulate(OF, runTime, animate)
+        function [] = simulate(OF, runTime, varargin)
             close all
             clear trajectory current_position
             
+            p = inputParser;
+            defaultAnimate = false;
+            defaultAnimationSpeed = 0.2;
+            
+            defaultHeadings = false;
+            defaultPhases = false;
+            defaultTrajectory = true;
+            defaultEllipseLocus = false;
+            defaultGraphAll = false; 
+            
+            addRequired(p, 'OF', @isobject);
+            addRequired(p, 'runTime', @isnumeric);
+            addOptional(p, 'animate', defaultAnimate, @islogical);
+            addOptional(p, 'animation_speed', defaultAnimationSpeed, @isnumeric);
+            addOptional(p, 'headings', defaultHeadings, @islogical);
+            addOptional(p, 'phases', defaultPhases, @islogical);
+            addOptional(p, 'trajectory', defaultTrajectory, @islogical);
+            addOptional(p, 'ellipse', defaultEllipseLocus, @islogical);
+            addOptional(p, 'graph_all', defaultGraphAll, @islogical);
+            
+            parse(p, OF, runTime, varargin{:});
+            
+            animate = p.Results.animate;
+            animationSpeed = p.Results.animation_speed;
+            graphHeadings = p.Results.headings;
+            graphPhases = p.Results.phases;
+            graphTrajectory = p.Results.trajectory;
+            graphEllipseLocus = p.Results.ellipse;
+            graphAll = p.Results.graph_all;
+            
+            if graphAll
+                [graphHeadings, graphPhases, graphTrajectory, graphEllipseLocus] = deal(true);
+            end
+            
+                
             % initialize states
+            
             states = zeros(OF.N, 7);
             states(:, 1) = OF.initial_poses(:, 1);
             states(:, 2) = OF.initial_poses(:, 2);
@@ -214,100 +265,89 @@ classdef oscillatingFish < handle
             end % end runtime loop
             
             % Plot trajectories
-            plot(theta_history);
-            figure
-            plot(phi_history);
-            figure
-            hold on;
-            plot(x_history,y_history);
-            axis('equal');
-            
-            current_position = zeros(robot);
-            %Animate
-            
-            if strcmp(animate, 'animate')
-            for robot = 1:OF.N
-                current_position(robot) = plot(x_history(1, robot), ...
-                    y_history(1, robot),'Marker','.','markersize', 20);
+            if graphHeadings
+                figure
+                plot(theta_history);
             end
             
-            for i = 1:runTime/OF.time_step
+            if graphPhases
+                figure
+                plot(phi_history);
+            end
+            
+            if graphTrajectory
+                figure
+                hold on;
+                plot(x_history,y_history);
+                axis('equal');
+            end
+
+            if animate
+                current_position = zeros(robot);
                 for robot = 1:OF.N
-                    set(current_position(robot), 'xdata', x_history(i, robot), ...
-                        'ydata', y_history(i, robot));
+                    current_position(robot) = plot(x_history(1, robot), ...
+                        y_history(1, robot),'Marker','.','markersize', 20);
                 end
                 
-                pause(.2)
-            end
-            end
-            
-            %*************************************************************
-            
-            % Get average center  
-            r = OF.createR(states);
-            E = OF.createE(OF.phi_last);
-            center = 0;
-            for robot = 1:OF.N
-                theta = states(robot, 6);
-                center  = center + (r(robot) - OF.mu*exp(1i*theta)*E(robot) + ...
-                    1i/OF.omega*exp(1i*theta))/OF.N;
-                
-                for phase = 0:2*pi/.01;
-                    ellipse = 1/(OF.Omega^2 - OF.omega^2) ...
-                        .*(OF.Omega.*sin(phase*.01) + 1i.*OF.omega.*cos(phase*.01));
-                    x(phase + 1, robot) = real(r(robot) - OF.mu*exp(1i*theta)*E(robot) ...
-                        + OF.mu*exp(1i*theta)*ellipse);
-                    y(phase + 1, robot) = imag(r(robot) - OF.mu*exp(1i*theta)*E(robot) ...
-                        + OF.mu*exp(1i*theta)*ellipse);
+                for i = 1:runTime/OF.time_step
+                    for robot = 1:OF.N
+                        set(current_position(robot), 'xdata', x_history(i, robot), ...
+                            'ydata', y_history(i, robot));
+                    end
+                    
+                    pause(animationSpeed)
                 end
             end
             
-      
-           revolutionT = floor(2*pi/OF.omega/OF.time_step);
+            if graphEllipseLocus
+                % Get average center
+                r = OF.createR(states);
+                E = OF.createE(OF.phi_last);
+                center = 0;
+                for robot = 1:OF.N
+                    theta = states(robot, 6);
+                    center  = center + (r(robot) - OF.mu*exp(1i*theta)*E(robot) + ...
+                        1i/OF.omega*exp(1i*theta))/OF.N;
+                    
+                    for phase = 0:2*pi/.01;
+                        ellipse = 1/(OF.Omega^2 - OF.omega^2) ...
+                            .*(OF.Omega.*sin(phase*.01) + 1i.*OF.omega.*cos(phase*.01));
+                        x(phase + 1, robot) = real(r(robot) - OF.mu*exp(1i*theta)*E(robot) ...
+                            + OF.mu*exp(1i*theta)*ellipse);
+                        y(phase + 1, robot) = imag(r(robot) - OF.mu*exp(1i*theta)*E(robot) ...
+                            + OF.mu*exp(1i*theta)*ellipse);
+                    end
+                end
+                
+                
+                revolutionT = floor(2*pi/OF.omega/OF.time_step);
+                start = runTime/OF.time_step - revolutionT;
+                endPoint = runTime/OF.time_step + 1;
+                last_x = x_history(start:endPoint, :);
+                last_y = y_history(start:endPoint, :);
+                
+                figure
+                hold on;
+                plot(last_x, last_y);                
+                for robot = 1:OF.N
+                    plot(x(:, robot), y(:, robot),'r');
+                end
 
-            start = runTime/OF.time_step - revolutionT;
-            endP = runTime/OF.time_step + 1;
-           last_x = x_history(start:endP, :);
-           last_y = y_history(start:endP, :);
-           
-           figure
-           hold on;
-           
-           plot(last_x, last_y);
-           
-           for robot = 1:OF.N
-            plot(x(:, robot), y(:, robot),'r');
-           end
-           
-           
-      
-            for robot = 1:OF.N
-                current_position(robot) = plot(x_history(endP, robot), ...
-                    y_history(endP, robot),'Marker','.','markersize', 20);
+                for robot = 1:OF.N
+                    current_position(robot) = plot(x_history(endPoint, robot), ...
+                        y_history(endPoint, robot),'Marker','.','markersize', 20);
+                end
+                
+                for heading = 0:2*pi/.01;
+                    R(heading + 1, 1) = real(center -1i/OF.omega*exp(1i*heading*.01));
+                    R(heading + 1, 2) = imag(center -1i/OF.omega*exp(1i*heading*.01));
+                end
+                
+                plot(R(:,1), R(:,2),'g');
+                plot(real(center), imag(center),'Marker','.','markersize', 20, 'color', 'g');
+                
             end
-            
-            for v = 0:2*pi/.01;
-              
-            R(v + 1, 1) = real(center -1i/OF.omega*exp(1i*v*.01));
-            R(v + 1, 2) = imag(center -1i/OF.omega*exp(1i*v*.01));
-            end
 
-           
-            plot(R(:,1), R(:,2),'g');
-
-            plot(real(center), imag(center),'Marker','.','markersize', 20, 'color', 'g');
-            thetas = theta_history(endP, :)
-            
-            
-            E = OF.createE(OF.phi);       % create ellipse matrix E(phi)
-            r = OF.createR(states);       % create complex vector matrix
-            s = OF.createS(r, E, states); % create S matrix
-            
-            abs(OF.P_matrix(1, :)*s)
-            abs(OF.P_matrix(2, :)*s)
-            %abs(OF.P_matrix(3, :)*s)
-            
-            commands = OF.fishControlLaw(t, states)
         end % end simulate
         
     end % end  public methods
@@ -373,7 +413,7 @@ classdef oscillatingFish < handle
             theta_near = states(nearestNeighbor(2), 6);
             
             u_x = 1 + OF.mu*cos(phi_j) + ...
-                OF.collision*(1 + cos(theta_j - theta_near))/distanceTo;   
+                OF.collisions*(1 + cos(theta_j - theta_near))/distanceTo;   
         end
  
 %************************************************************************
