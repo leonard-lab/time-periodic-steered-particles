@@ -3,11 +3,11 @@ clear all
 clc
 close all
 pointGenerator;
-fish = oscillatingFish(positions);
+fish = oscillatingFish(positions, 'headings','sync','collision_avoidance',false);
 
 runTime = 200;
 %%
-simulate(fish, runTime, 'animat');
+simulate(fish, runTime, 'graph_all', true, 'animate',false,'animation_speed', 0.1);
 
 %%
 
