@@ -78,9 +78,9 @@ classdef oscillatingFish < handle
         phi;                  % N x 1 matrix of speed phase angles
         time_step = 1/7.5;    % Default time step between commands
         time = 0;             % Current running time
-        phi_last;             % last speed phases 
+        phi_last;             % Last set of speed phases 
         theta_state;          % Control for heading alignments
-        collisions; 
+        collisions;           % Collision control enabled or disabled
         
     end % end private properties
        
