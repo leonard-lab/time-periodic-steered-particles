@@ -50,7 +50,7 @@ classdef oscillatingFish < handle
     properties (Access = public)
         omega = 1;           % Natural heading turning frequency
         Omega = 1*2.5;         % Natural speed phase frequency
-        mu = 0.7;              % Speed oscillation parameter
+        mu = 0.5;              % Speed oscillation parameter
         k = 1;                 % Steering control parameter
         k_phi = 1;             % Speed phase control parameter
         scale = 1;             % Commands scaling  1 meter: scale
@@ -243,79 +243,44 @@ classdef oscillatingFish < handle
             
             %*************************************************************
             
-            % Get average center
-            
+            % Get average center  
             r = OF.createR(states);
             E = OF.createE(OF.phi_last);
             center = 0;
             for robot = 1:OF.N
                 theta = states(robot, 6);
-                center  = (r(robot) - OF.mu*exp(1i*theta)*E(robot) + ...
-                          1i/OF.omega*exp(1i*theta))/OF.N;
+                center  = center + (r(robot) - OF.mu*exp(1i*theta)*E(robot) + ...
+                    1i/OF.omega*exp(1i*theta))/OF.N;
+                
+                for phase = 0:2*pi/.01;
+                    ellipse = 1/(OF.Omega^2 - OF.omega^2) ...
+                        .*(OF.Omega.*sin(phase*.01) + 1i.*OF.omega.*cos(phase*.01));
+                    x(phase + 1, robot) = real(r(robot) - OF.mu*exp(1i*theta)*E(robot) ...
+                        + OF.mu*exp(1i*theta)*ellipse);
+                    y(phase + 1, robot) = imag(r(robot) - OF.mu*exp(1i*theta)*E(robot) ...
+                        + OF.mu*exp(1i*theta)*ellipse);
+                end
             end
             
-            
-            
-            
-            
-            
-            
-           robot = 1;
-                theta = states(robot, 6);
-                r = OF.createR(states);
-                phi_j = OF.phi_last(1);
-                E = 1/(OF.Omega^2 - OF.omega^2) ...
-                    .*(OF.Omega.*sin(phi_j) + 1i.*OF.omega.*cos(phi_j));
-                OF.c(robot) = r(robot) - OF.mu*exp(1i*theta)*E(robot) + 1i/OF.omega*exp(1i*theta);
-          
-            
-           for u = 0:2*pi/.01;
-            E2 = 1/(OF.Omega^2 - OF.omega^2) ...
-                    .*(OF.Omega.*sin(u*.01) + 1i.*OF.omega.*cos(u*.01));
-            e(u + 1, 1) = real(r(robot) - OF.mu*exp(1i*theta)*E(1) + OF.mu*exp(1i*theta)*E2);
-            e(u + 1, 2) = imag(r(robot) - OF.mu*exp(1i*theta)*E(1) + OF.mu*exp(1i*theta)*E2);
-           end
-           
-           
-           
-           x = e(:, 1);
-           y = e(:, 2);
-           
-           %****************************************************
-           robot = 2;
-                theta = states(robot, 6);
-                r = OF.createR(states);
-                phi_j = OF.phi_last(2);
-                E = 1/(OF.Omega^2 - OF.omega^2) ...
-                    .*(OF.Omega.*sin(phi_j) + 1i.*OF.omega.*cos(phi_j));
-                OF.c(robot) = r(robot) - OF.mu*exp(1i*theta)*E + 1i/OF.omega*exp(1i*theta);
-          
-            
-           for u = 0:2*pi/.01;
-            E2 = 1/(OF.Omega^2 - OF.omega^2) ...
-                    .*(OF.Omega.*sin(u*.01) + 1i.*OF.omega.*cos(u*.01));
-            e(u + 1, 1) = real(r(robot) - OF.mu*exp(1i*theta)*E(1) + OF.mu*exp(1i*theta)*E2);
-            e(u + 1, 2) = imag(r(robot) - OF.mu*exp(1i*theta)*E(1) + OF.mu*exp(1i*theta)*E2);
-           end
-           
-           
-           
-           x2 = e(:, 1);
-           y2 = e(:, 2);
-           
-           %***************************************************************
-           
-            
+      
            revolutionT = floor(2*pi/OF.omega/OF.time_step);
-            figure
-            hold on;
+
             start = runTime/OF.time_step - revolutionT;
             endP = runTime/OF.time_step + 1;
            last_x = x_history(start:endP, :);
            last_y = y_history(start:endP, :);
+           
+           figure
+           hold on;
+           
            plot(last_x, last_y);
-            plot(x,y,'r');
-            plot(x2,y2,'r');
+           
+           for robot = 1:OF.N
+            plot(x(:, robot), y(:, robot),'r');
+           end
+           
+           
+      
             for robot = 1:OF.N
                 current_position(robot) = plot(x_history(endP, robot), ...
                     y_history(endP, robot),'Marker','.','markersize', 20);
@@ -323,19 +288,18 @@ classdef oscillatingFish < handle
             
             for v = 0:2*pi/.01;
               
-            R(v + 1, 1) = real(OF.c(1) -1i/OF.omega*exp(1i*v*.01));
-            R(v + 1, 2) = imag(OF.c(1) -1i/OF.omega*exp(1i*v*.01));
+            R(v + 1, 1) = real(center -1i/OF.omega*exp(1i*v*.01));
+            R(v + 1, 2) = imag(center -1i/OF.omega*exp(1i*v*.01));
             end
-           % plot(real(r), imag(r), 'Marker','.','markersize', 20,'color', 'r' );
+
            
             plot(R(:,1), R(:,2),'g');
-            
-            plot(real(OF.c(1)), imag(OF.c(1)),'Marker','.','markersize', 20);
+
             plot(real(center), imag(center),'Marker','.','markersize', 20, 'color', 'g');
             thetas = theta_history(endP, :)
             
             
-            E = OF.createE(OF.phi);             % create ellipse matrix E(phi)
+            E = OF.createE(OF.phi);       % create ellipse matrix E(phi)
             r = OF.createR(states);       % create complex vector matrix
             s = OF.createS(r, E, states); % create S matrix
             
@@ -424,7 +388,8 @@ classdef oscillatingFish < handle
             
             nearestNeighbor = OF.nearestNeighbor(r, j);
             neighbor = nearestNeighbor(2);
-            avoidance = .0*sin((-states(j, 6) + angle(r(j) - r(neighbor)))/2);
+            avoidance = 0*sin((-states(j, 6) + angle(r(j) - r(neighbor)))/2);
+            
             u_theta = OF.omega - OF.k*real(a'*b) + dU_dtheta ...
                       + avoidance/nearestNeighbor(1)^2;
             

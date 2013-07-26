@@ -5,9 +5,9 @@ close all
 pointGenerator;
 fish = oscillatingFish(positions);
 
-runTime = 100;
+runTime = 200;
 %%
-simulate(fish, runTime);
+simulate(fish, runTime, 'animat');
 
 %%
 

@@ -1,4 +1,4 @@
-N = 4; 
+N = 2; 
 
 positions = zeros(N, 4);
 % theta = 0;
