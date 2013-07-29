@@ -2,12 +2,15 @@
 clear all
 clc
 close all
-pointGenerator;
+%pointGenerator;
+
+%positions = [-0.2577 -0.0514 0 -2.2921; -0.1788 0.1275 0 -2.2745];
+positions = [-0.5459 0.1304 0 -1.6687; -0.5483 -0.0426 0 -1.6747];
 fish = oscillatingFish(positions, 'headings','sync','collision_avoidance',false);
 
-runTime = 200;
+runTime = 50;
 %%
-simulate(fish, runTime, 'graph_all', true, 'animate',false,'animation_speed', 0.1);
+simulate(fish, runTime, 'graph_all', true, 'animate',true,'animation_speed', 0.1);
 
 %%
 
@@ -25,8 +28,9 @@ hold on
 N = size(fish.initial_poses,1);
 for robot = 1:N
     plot(m.get_history(robot,'x'), m.get_history(robot,'y'));
+    axis('equal')
 end
-axis('equal');
+%axis('equal');
 colors = ['r';'b';'g';'k';'y';'m'];
 a = size(m.get_history(1,'x'));
 position = zeros(N);
