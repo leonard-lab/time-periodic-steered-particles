@@ -62,9 +62,9 @@ classdef oscillatingFish < handle
     %**********************************************************************
     
     properties (Access = public)
-        omega = 1;            % Natural heading turning frequency
-        Omega = 1*2.5;        % Natural speed phase frequency
-        mu = 0.5;             % Speed oscillation parameter
+        omega = .4;            % Natural heading turning frequency
+        Omega = .4*2.15;        % Natural speed phase frequency
+        mu = 0.6;             % Speed oscillation parameter
         k = 1;                % Steering control parameter
         k_phi = 1;            % Speed phase control parameter
         scale = 10;           % Commands scaling  1 meter: scale
@@ -106,7 +106,11 @@ classdef oscillatingFish < handle
             OF.initial_poses = p.Results.initial_poses;
             OF.N = size(OF.initial_poses, 1);
             OF.P_matrix = eye(OF.N) - 1/OF.N*ones(OF.N);
-            OF.phi = zeros(OF.N, 1);      
+            OF.phi = zeros(OF.N, 1);
+            
+            OF.phi(1) = -1.7227;
+            OF.phi(2) = 1.3579;
+            
             OF.theta_state = p.Results.headings;
             OF.collisions = p.Results.collision_avoidance;
             
@@ -319,14 +323,14 @@ classdef oscillatingFish < handle
                 
                 % Get average center and ellipse locus
                 center = 0;
-                [x, y] = deal(zeros(2*pi/0.1 + 1, OF.N));
+                [x, y] = deal(zeros(floor(2*pi/0.1 + 1), OF.N));
                 
                 for robot = 1:OF.N
                     theta = states(robot, 6);
                     center  = center + (r(robot) - (1)*OF.mu*exp(1i*theta)*E(robot) + ...
                               (1/OF.scale)*1i/OF.omega*exp(1i*theta))/OF.N;
                     
-                    for phase = 0:2*pi/.01;
+                    for phase = floor(0:2*pi/.01);
                         ellipse = (1/OF.scale)*1/(OF.Omega^2 - OF.omega^2) ...
                             .*(OF.Omega.*sin(phase*.01) + 1i.*OF.omega.*cos(phase*.01));
                         x(phase + 1, robot) = real(r(robot) - OF.mu*exp(1i*theta)*E(robot) ...
@@ -349,12 +353,17 @@ classdef oscillatingFish < handle
                 hold on;
                 plot(last_x, last_y);                
                 for robot = 1:OF.N
-                    plot(x(:, robot), y(:, robot),'r');
+                    plot(x(:, robot), y(:, robot),'--r');
                 end
 
                 for robot = 1:OF.N
                     current_position(robot) = plot(x_history(endPoint, robot), ...
                         y_history(endPoint, robot),'Marker','.','markersize', 20);
+                    disp(x_history(endPoint, robot));
+                    disp(y_history(endPoint, robot));
+                    disp(theta_history(endPoint, robot));
+                    disp(OF.phi_last(robot));
+                    
                 end
                 
                 for heading = 0:2*pi/.01;
@@ -362,8 +371,8 @@ classdef oscillatingFish < handle
                     R(heading + 1, 2) = imag(center - (1/OF.scale)*1i/OF.omega*exp(1i*heading*.01));
                 end
                 
-                plot(R(:,1), R(:,2),'g');
-                plot(real(center), imag(center),'Marker','.','markersize', 20, 'color', 'g');
+                plot(R(:,1), R(:,2),'--r');
+                plot(real(center), imag(center),'Marker','.','markersize', 20, 'color', 'r');
                 axis('equal');
                 
             end % end graph ellipse locus
@@ -482,7 +491,7 @@ classdef oscillatingFish < handle
             phi_j_dot = OF.Omega/OF.omega*u_theta - (dU1_dphi);
                    
             % Update phi
-            OF.phi(index, 1) = (phi_j + phi_j_dot*dt);
+            OF.phi(index, 1) = wrapToPi(phi_j + phi_j_dot*dt);
             
         end % end updatePhi
 
