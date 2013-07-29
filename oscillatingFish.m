@@ -62,12 +62,12 @@ classdef oscillatingFish < handle
     %**********************************************************************
     
     properties (Access = public)
-        omega = .4;            % Natural heading turning frequency
-        Omega = .4*2.15;        % Natural speed phase frequency
+        omega = .5;            % Natural heading turning frequency
+        Omega = .5*.5;        % Natural speed phase frequency
         mu = 0.6;             % Speed oscillation parameter
         k = 1;                % Steering control parameter
         k_phi = 1;            % Speed phase control parameter
-        scale = 10;           % Commands scaling  1 meter: scale
+        scale = 5;           % Commands scaling  1 meter: scale
         initial_poses;        % initial robot positions
 
     end % end public properties
@@ -108,9 +108,11 @@ classdef oscillatingFish < handle
             OF.P_matrix = eye(OF.N) - 1/OF.N*ones(OF.N);
             OF.phi = zeros(OF.N, 1);
             
-            OF.phi(1) = -1.7227;
-            OF.phi(2) = 1.3579;
-            
+%             OF.phi(1) = 1.6554;
+%             OF.phi(2) = -1.5589;
+
+             OF.phi(1) = -1.3637;
+             OF.phi(2) = 1.7616
             OF.theta_state = p.Results.headings;
             OF.collisions = p.Results.collision_avoidance;
             
@@ -230,7 +232,7 @@ classdef oscillatingFish < handle
                 phi_history(1, robot) = 1+OF.mu*cos(OF.phi(robot));
             end % end initial positions loop
             
-            for t = 1:(runTime/OF.time_step)
+            for t = 1:floor(runTime/OF.time_step)
                 x_old = states(:, 1);
                 y_old = states(:, 2);
                 theta_old = states(:, 6);
@@ -342,8 +344,8 @@ classdef oscillatingFish < handle
                 
                 % Get last full orbit
                 revolutionT = floor(2*pi/OF.omega/OF.time_step);
-                start = runTime/OF.time_step - revolutionT;
-                endPoint = runTime/OF.time_step + 1;
+                start = floor(runTime/OF.time_step - revolutionT);
+                endPoint = floor(runTime/OF.time_step + 1);
                 last_x = x_history(start:endPoint, :);
                 last_y = y_history(start:endPoint, :);
                 
