@@ -1,4 +1,4 @@
-N = 2; 
+N = 3; 
 
 positions = zeros(N, 4);
 % theta = 0;
@@ -14,7 +14,7 @@ positions = zeros(N, 4);
 
 for i = 1:N
     
-    positions(i, 1) = .25*rand(1);
-    positions(i, 2) = .25*rand(1);
-    positions(i,4) = 2*pi*rand(1);
+    positions(i, 1) = -.25*rand(1);
+    positions(i, 2) = -.25*rand(1);
+    positions(i,4) = wrapToPi(2*pi*rand(1));
 end

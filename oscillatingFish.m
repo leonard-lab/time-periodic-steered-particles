@@ -62,9 +62,9 @@ classdef oscillatingFish < handle
     %**********************************************************************
     
     properties (Access = public)
-        omega = .5;            % Natural heading turning frequency
-        Omega = .5*.5;        % Natural speed phase frequency
-        mu = 0.6;             % Speed oscillation parameter
+        omega = .8;            % Natural heading turning frequency
+        Omega = .8*1.5;        % Natural speed phase frequency
+        mu = 0.5;             % Speed oscillation parameter
         k = 1;                % Steering control parameter
         k_phi = 1;            % Speed phase control parameter
         scale = 5;           % Commands scaling  1 meter: scale
@@ -76,7 +76,7 @@ classdef oscillatingFish < handle
         P_matrix;             % The P matrix, I(n) - ones(n)
         N;                    % Number of robots
         phi;                  % N x 1 matrix of speed phase angles
-        time_step = 1/7.5;    % Default time step between commands
+        time_step = 1/15;    % Default time step between commands
         time = 0;             % Current running time
         phi_last;             % Last set of speed phases 
         theta_state;          % Control for heading alignments
@@ -107,12 +107,16 @@ classdef oscillatingFish < handle
             OF.N = size(OF.initial_poses, 1);
             OF.P_matrix = eye(OF.N) - 1/OF.N*ones(OF.N);
             OF.phi = zeros(OF.N, 1);
-            
-%             OF.phi(1) = 1.6554;
-%             OF.phi(2) = -1.5589;
+            %two good
+%             OF.phi(1) = -.2137;
+%             OF.phi(2) = 2.8722;
 
-             OF.phi(1) = -1.3637;
-             OF.phi(2) = 1.7616
+% three
+
+OF.phi(1) = -.0346;
+OF.phi(2) = -2.0876;
+OF.phi(3) = 2.0396;
+
             OF.theta_state = p.Results.headings;
             OF.collisions = p.Results.collision_avoidance;
             
@@ -229,7 +233,6 @@ classdef oscillatingFish < handle
                 x_history(1, robot) = OF.initial_poses(robot, 1);
                 y_history(1, robot) = OF.initial_poses(robot, 2);
                 theta_history(1, robot) = OF.initial_poses(robot, 4);
-                phi_history(1, robot) = 1+OF.mu*cos(OF.phi(robot));
             end % end initial positions loop
             
             for t = 1:floor(runTime/OF.time_step)
@@ -239,6 +242,7 @@ classdef oscillatingFish < handle
                 
                 % Get control law
                 commands = OF.fishControlLaw(t, states);
+                
                 vx = commands(:, 1);
                 utheta = commands(:, 2);
                 
@@ -380,6 +384,92 @@ classdef oscillatingFish < handle
             end % end graph ellipse locus
 
         end % end simulate
+        
+        function [] = miabotSim(OF, runTime, varargin)
+            
+            % Check input arguments, and set options
+            p = inputParser;
+            defaultAnimate = false;
+            defaultAnimationSpeed = 0.2;
+            
+            addRequired(p, 'OF', @isobject);
+            addRequired(p, 'runTime', @isnumeric);
+            addOptional(p, 'animate', defaultAnimate, @islogical);
+            addOptional(p, 'animation_speed', defaultAnimationSpeed, @isnumeric);     
+            parse(p, OF, runTime, varargin{:});        
+            animate = p.Results.animate;
+            animationSpeed = p.Results.animation_speed;
+
+            % initialize states
+            states = zeros(OF.N, 7);
+            states(:, 1) = OF.initial_poses(:, 1);
+            states(:, 2) = OF.initial_poses(:, 2);
+            states(:, 3) = OF.initial_poses(:, 3);
+            states(:, 6) = OF.initial_poses(:, 4);
+            
+            % keep track of robot position history
+            [x_history, y_history, theta_history, phi_history] ...
+                                          = deal(zeros(runTime + 1, OF.N));
+            
+            for robot = 1:OF.N
+                x_history(1, robot) = OF.initial_poses(robot, 1);
+                y_history(1, robot) = OF.initial_poses(robot, 2);
+                theta_history(1, robot) = OF.initial_poses(robot, 4);
+            end % end initial positions loop
+            
+            for t = 1:floor(runTime/OF.time_step)
+                
+                % Get control law
+                commands = OF.fishControlLaw(t, states);
+                
+                [output, crap] = propagate(OF, states, commands, 1/15, [0 0 0 0], OF.N); 
+                states = output;
+                
+                % Add to history
+                for robot = 1:OF.N
+                    x_history(t + 1, robot) = states(robot, 1);
+                    y_history(t + 1, robot) = states(robot, 2);
+                    theta_history(t + 1, robot) = states(robot, 4);
+                    phi_history(t + 1, robot) = 1 + OF.mu*cos(OF.phi(robot));
+                end % history update loop
+                
+                
+            end % end runtime loop
+            
+            % Plot trajectories
+
+            figure
+            plot(theta_history);
+                      
+            figure
+            plot(phi_history);
+            
+            figure
+            hold on;
+            plot(x_history,y_history);
+            axis('equal');
+            
+            
+            
+            % Animation of trajectories
+            if animate
+                current_position = zeros(robot);
+                for robot = 1:OF.N
+                    current_position(robot) = plot(x_history(1, robot), ...
+                        y_history(1, robot),'Marker','.','markersize', 20);
+                end
+                
+                for i = 1:runTime/OF.time_step
+                    for robot = 1:OF.N
+                        set(current_position(robot), 'xdata', x_history(i, robot), ...
+                            'ydata', y_history(i, robot));
+                    end
+                    
+                    pause(animationSpeed)
+                end
+                
+            end % end animation
+        end
         
     end % end  public methods
     
