@@ -1,3 +1,6 @@
+%
+% Runscript for oscillating fish algorithm 
+
 %%
 %************************************************************************
 %  Sets up oscillatingFish object with random intial conditions.
@@ -18,7 +21,7 @@ end
 
 fish = oscillatingFish(positions, 'headings','sync','collision_avoidance',false);
 
-runTime = 20;
+runTime = 5;
 %%
 %************************************************************************
 %  Simulates oscillating fish behavior based on initial conditions.
