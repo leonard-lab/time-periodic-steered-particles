@@ -107,15 +107,13 @@ classdef oscillatingFish < handle
             OF.N = size(OF.initial_poses, 1);
             OF.P_matrix = eye(OF.N) - 1/OF.N*ones(OF.N);
             OF.phi = zeros(OF.N, 1);
-            %two good
-%             OF.phi(1) = -.2137;
-%             OF.phi(2) = 2.8722;
+
 
 % three
 
-OF.phi(1) = -.0346;
-OF.phi(2) = -2.0876;
-OF.phi(3) = 2.0396;
+% OF.phi(1) = -.0346;
+% OF.phi(2) = -2.0876;
+% OF.phi(3) = 2.0396;
 
             OF.theta_state = p.Results.headings;
             OF.collisions = p.Results.collision_avoidance;
@@ -471,8 +469,55 @@ OF.phi(3) = 2.0396;
             end % end animation
         end
         
+        function [] = demo(OF, runTime, varargin)
+            % Check input arguments, and set options
+            p = inputParser;
+            defaultN = 2;
+            defaultState = 'sync';
+            expected_states = {'sync', 'splay'};
+            addRequired(p, 'OF', @isobject);
+            addRequired(p, 'runTime', @isnumeric);
+            addOptional(p, 'n_robots', defaultN, @isnumeric);
+            addOptional(p, 'headings', defaultState, @(x) any(validatestring(x, expected_states)));    
+            parse(p, OF, runTime, varargin{:});        
+            
+            OF.N = p.Results.n_robots;
+            OF.phi = zeros(OF.N);
+            OF.P_matrix = eye(OF.N) - 1/OF.N*ones(OF.N);
+            OF.theta_state = p.Results.headings;
+            
+            if OF.N == 2 && strcmp(OF.theta_state, 'sync')
+            OF.phi(1) = -.2137;
+            OF.phi(2) = 2.8722;
+            OF.scale = 6;
+            OF.initial_poses = [.0503 -.5130 0 -.2331; .0682 -.6709 0 -.2244];      
+            OF.simulate(runTime);
+            control_law = @(t, x) OF.fishControlLaw(t,x);    
+            % calls new Miabot object that actuates robot motion
+            m = Miabots(OF.initial_poses, control_law, 'velocity', runTime,...
+                'sim', true);
+            m.start
+            end
+            
+            if OF.N == 2 && strcmp(OF.theta_state, 'splay')
+            OF.phi(1) = 0;
+            OF.phi(2) = 0;
+            OF.scale = 6;
+            OF.mu = 0;
+            OF.initial_poses = [-.25 -.5 0 0; .25 -.5 0 0];      
+            OF.simulate(runTime);
+            control_law = @(t, x) OF.fishControlLaw(t,x);    
+            % calls new Miabot object that actuates robot motion
+            m = Miabots(OF.initial_poses, control_law, 'velocity', runTime,...
+                'sim', true);
+            m.start
+            end
+            
+        end
+        
     end % end  public methods
     
+
     methods (Access = private)
         
 %************************************************************************
