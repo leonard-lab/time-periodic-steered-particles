@@ -21,7 +21,7 @@ positions = [0.0605 -.4995 0 0.3998; 0.0131 -.6810 0 .4093; .2437 -.5797 0 .4010
 
 fish = oscillatingFish(positions, 'headings','sync','collision_avoidance',false);
 
-runTime = 10;
+runTime = 20;
 %%
 simulate(fish, runTime, 'graph_all', true, 'animate',true,'animation_speed', 0.1);
 

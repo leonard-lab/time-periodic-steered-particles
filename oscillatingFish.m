@@ -491,12 +491,12 @@ classdef oscillatingFish < handle
             OF.phi(2) = 2.8722;
             OF.scale = 6;
             OF.initial_poses = [.0503 -.5130 0 -.2331; .0682 -.6709 0 -.2244];      
-            OF.simulate(runTime);
-            control_law = @(t, x) OF.fishControlLaw(t,x);    
-            % calls new Miabot object that actuates robot motion
-            m = Miabots(OF.initial_poses, control_law, 'velocity', runTime,...
-                'sim', true);
-            m.start
+           % OF.simulate(runTime);
+%             control_law = @(t, x) OF.fishControlLaw(t,x);    
+%             % calls new Miabot object that actuates robot motion
+%             m = Miabots(OF.initial_poses, control_law, 'velocity', runTime,...
+%                 'sim', true);
+%             m.start
             end
             
             if OF.N == 2 && strcmp(OF.theta_state, 'splay')
@@ -505,12 +505,12 @@ classdef oscillatingFish < handle
             OF.scale = 6;
             OF.mu = 0;
             OF.initial_poses = [-.25 -.5 0 0; .25 -.5 0 0];      
-            OF.simulate(runTime);
-            control_law = @(t, x) OF.fishControlLaw(t,x);    
-            % calls new Miabot object that actuates robot motion
-            m = Miabots(OF.initial_poses, control_law, 'velocity', runTime,...
-                'sim', true);
-            m.start
+%             OF.simulate(runTime);
+%             control_law = @(t, x) OF.fishControlLaw(t,x);    
+%             % calls new Miabot object that actuates robot motion
+%             m = Miabots(OF.initial_poses, control_law, 'velocity', runTime,...
+%                 'sim', true);
+%             m.start
             end
             
         end
