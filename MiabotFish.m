@@ -1,77 +1,100 @@
 %%
+%************************************************************************
+%  Sets up oscillatingFish object with random intial conditions.
+%************************************************************************
 clear all
 clc
-%close all
-%pointGenerator;
+close all
 
-%positions = [-0.2577 -0.0514 0 -2.2921; -0.1788 0.1275 0 -2.2745];
-%positions = [-0.5459 0.1304 0 -1.6687; -0.5483 -0.0426 0 -1.6747];
-%positions = [-0.0103 -.4119 0 -.0184; -.2836 -0.4010 0 -0.0095];
+N = 2;
+positions = zeros(N, 4);
 
-%positions = [-.6245 0.0139 0 -1.9812; -0.3620 0.2621 0 -1.9948];
-
-%two good
-%positions = [.0503 -.5130 0 -.2331; .0682 -.6709 0 -.2244];
-
-% three
-
-%positions = [.25 -.55 0 0; -.25 -.55 0 0; 0 -.55 0 0];
-
-positions = [0.0605 -.4995 0 0.3998; 0.0131 -.6810 0 .4093; .2437 -.5797 0 .4010];
+for i = 1:N
+    
+    positions(i, 1) = -.25*rand(1);
+    positions(i, 2) = -.25*rand(1);
+    positions(i,4) = wrapToPi(2*pi*rand(1));
+end
 
 fish = oscillatingFish(positions, 'headings','sync','collision_avoidance',false);
 
 runTime = 20;
 %%
+%************************************************************************
+%  Simulates oscillating fish behavior based on initial conditions.
+%  Options are: 
+%            'animate' - logical. Draw particle simulation of robots moving
+%                        along the trajectories. 
+%           'animation_speed' - numerical. Pause time between point
+%                               updates. Default: 0.2.
+%            Graph options - 'headings', 'phases', 'trajectory', 'ellipse',
+%                            'graph_all'
+%                            logical. User selects which plots to display.
+%                            'graph_all' overides and displays all graphs.
+%************************************************************************
 simulate(fish, runTime, 'graph_all', true, 'animate',true,'animation_speed', 0.1);
 
 %%
-miabotSim(fish, runTime, 'animate', false);
+%************************************************************************
+%  Sets up good demonstration conditions for the Miabot robots in current 
+%  DCSL floor robot setup. Options are:
+%            'n_robots' - Change number of robots. Default is original
+%                         number oscillatingFish was initialized to. Currently
+%                         limited to n = 2 or 3 robots.
+%     
+%            'headings' - Choose between 'sync' or 'splay'. Default is
+%                         'sync'. Currently 3 robots only supports splay state. 
+%************************************************************************ 
+
+fish.demoConditions(runTime,'n_robots', 3, 'headings', 'splay');
 
 %%
-
-% call control law for robot motion
+%************************************************************************
+% Sets up and sends commands to Miabots.
+%************************************************************************
 control_law = @(t, x) fish.fishControlLaw(t,x);
 
 % calls new Miabot object that actuates robot motion
 m = Miabots(fish.initial_poses, control_law, 'velocity', runTime,...
     'sim', true,'sim_noise', [.00 .00 .00 .00]);
 m.start
+
 %%
-% plots the resulting path of the two robots against the ideal
+%************************************************************************
+% Plots Miabot trajectories
+%************************************************************************
 figure
 hold on
 N = size(fish.initial_poses,1);
 for robot = 1:N
-%      plot(m.get_history(robot,'x'), m.get_history(robot,'y'));
-%      axis('equal')
-
 x_history(:, robot) = m.get_history(robot, 'x');
 y_history(:, robot) = m.get_history(robot, 'y');
 end
 plot(x_history, y_history);
 axis('equal');
-% colors = ['r';'b';'g';'k';'y';'m'];
-% a = size(m.get_history(1,'x'));
-% position = zeros(N);
-% for robot = 1:N
-%     statex = m.get_history(robot, 'x');
-%     statey = m.get_history(robot, 'y');
-%     position(robot) = plot(statex(1), ...
-%         statey(1),'Marker','.','markersize', 20,'Color', colors(robot));
-% end
-% 
-% for i = 1:a(2)
-%     for robot = 1:N
-%         clear statex statey
-%         statex = m.get_history(robot, 'x');
-%         statey = m.get_history(robot, 'y');
-%         set(position(robot), 'xdata', statex(i), ...
-%             'ydata', statey(i));
-%     end
-%     
-%     pause(.05)
-% end
 
+%%
+%************************************************************************
+% Animates Miabot trajectories
+%************************************************************************
+colors = ['r';'b';'g';'k';'y';'m'];
+a = size(m.get_history(1,'x'));
+position = zeros(N);
+for robot = 1:N
+    statex = m.get_history(robot, 'x');
+    statey = m.get_history(robot, 'y');
+    position(robot) = plot(statex(1), ...
+        statey(1),'Marker','.','markersize', 20,'Color', colors(robot));
+end
 
-% 
+for i = 1:a(2)
+    for robot = 1:N
+        clear statex statey
+        statex = m.get_history(robot, 'x');
+        statey = m.get_history(robot, 'y');
+        set(position(robot), 'xdata', statex(i), ...
+            'ydata', statey(i));
+    end
+    
+    pause(.05)
+end
