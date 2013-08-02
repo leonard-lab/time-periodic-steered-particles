@@ -7,21 +7,21 @@
 %************************************************************************
 clear all
 clc
-close all
+%close all
 
 N = 2;
-positions = zeros(N, 4);
-
-for i = 1:N
-    
-    positions(i, 1) = -.25*rand(1);
-    positions(i, 2) = -.25*rand(1);
-    positions(i,4) = wrapToPi(2*pi*rand(1));
-end
-
+% positions = zeros(N, 4);
+% 
+% for i = 1:N
+%     
+%     positions(i, 1) = -.25*rand(1);
+%     positions(i, 2) = -.25*rand(1);
+%     positions(i,4) = wrapToPi(2*pi*rand(1));
+% end
+positions = [-.2 -.55 0 0; .1 -.5 0 0];
 fish = oscillatingFish(positions, 'headings','sync','collision_avoidance',false);
 
-runTime = 5;
+runTime = 15;
 %%
 %************************************************************************
 %  Simulates oscillating fish behavior based on initial conditions.
@@ -35,7 +35,7 @@ runTime = 5;
 %                            logical. User selects which plots to display.
 %                            'graph_all' overides and displays all graphs.
 %************************************************************************
-simulate(fish, runTime, 'graph_all', true, 'animate',true,'animation_speed', 0.1);
+simulate(fish, runTime, 'graph_all', false, 'animate',false,'animation_speed', 0.1);
 
 %%
 %************************************************************************
@@ -49,7 +49,7 @@ simulate(fish, runTime, 'graph_all', true, 'animate',true,'animation_speed', 0.1
 %                         'sync'. Currently 3 robots only supports splay state. 
 %************************************************************************ 
 
-fish.demoConditions(runTime,'n_robots', 3, 'headings', 'splay');
+fish.demoConditions(runTime,'n_robots', 2, 'headings', 'sync');
 
 %%
 %************************************************************************
@@ -59,7 +59,7 @@ control_law = @(t, x) fish.fishControlLaw(t,x);
 
 % calls new Miabot object that actuates robot motion
 m = Miabots(fish.initial_poses, control_law, 'velocity', runTime,...
-    'sim', true,'sim_noise', [.00 .00 .00 .00]);
+    'sim', false,'sim_noise', [.00 .00 .00 .00]);
 m.start
 
 %%
@@ -73,8 +73,14 @@ for robot = 1:N
 x_history(:, robot) = m.get_history(robot, 'x');
 y_history(:, robot) = m.get_history(robot, 'y');
 end
+ %plot(x_history(:,1), y_history(:,1),'r');
+ %plot(x_history(:,2), y_history(:,2),'k');
 plot(x_history, y_history);
 axis('equal');
+ylabel('Y (meters)');
+xlabel('X (meters)');
+legend('Miabot 1', 'Miabot 2');
+title('Miabot Trajectories');
 
 %%
 %************************************************************************

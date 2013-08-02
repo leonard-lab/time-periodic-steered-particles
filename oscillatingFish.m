@@ -323,7 +323,7 @@ classdef oscillatingFish < handle
                 axis('equal');
                 ylabel('Y (meters)');
                 xlabel('X (meters)');
-                legend('Robot 1', 'Robot 2');
+                %legend('Sim 1', 'Sim 2');
                 title('Robot Trajectories');
             end
          
@@ -460,12 +460,12 @@ classdef oscillatingFish < handle
             if obj.N == 2 && strcmp(obj.theta_state, 'splay')
                 obj.phi(1) = 0;
                 obj.phi(2) = 0;
-                obj.scale = 6;
+                obj.scale = 4;
                 obj.mu = 0;
                 obj.omega = 0.8;
                 obj.Omega = 0.8*1.5;
                 obj.coeff = -1;
-                obj.initial_poses = [-.25 -.5 0 0; .25 -.5 0 0];
+                obj.initial_poses = [-.25 -.45 0 0; .25 -.45 0 0];
             end
             
             % 3 robots, splay state, no oscillation
@@ -477,7 +477,7 @@ classdef oscillatingFish < handle
                 obj.omega = 0.8;
                 obj.Omega = 0.8*1.5;
                 obj.coeff = -1;
-                obj.initial_poses = [-.25 -.5 0 -pi/2; .25 -.5 0 pi/2; 0 -.25 0 pi];
+                obj.initial_poses = [-.25 -.5 0 -1.5; .25 -.5 0 1.5; 0 -.25 0 3];
             end
         end
         
